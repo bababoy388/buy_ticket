@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Данные билета</title>
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+        }
+
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            background-color: #212d3b;
+            color: rgba(255, 255, 255, 0.85);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Верхняя часть - фон для билета */
+        .ticket-background {
+            background-color: #212d3b;
+            width: 100%;
+            padding: 10px 16px 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            justify-content: flex-start;
+        }
+
+        /* Нижняя часть - темный фон под кнопкой */
+        .button-section {
+            background-color: #151e27;
+            width: 100%;
+            padding: 8px 16px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .ticket-container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            word-wrap: break-word;
+            word-break: normal;
+            overflow-wrap: anywhere;
+        }
+
+        .ticket {
+            background-color: transparent;
+            border-radius: 0;
+            overflow: visible;
+            box-shadow: none;
+            margin-bottom: 0;
+        }
+
+        .header {
+            background-color: transparent;
+            color: rgba(255, 255, 255, 0.85);
+            padding: 0 16px 15px;
+            text-align: center;
+            border-bottom: none;
+            margin-top: 0;
+        }
+
+        .header h1 {
+            font-size: 25px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        /* Стили для основного контента */
+        .main-content {
+            padding: 16px;
+            display: block;
+        }
+
+        .row-block {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(58, 72, 89, 0.7);
+            min-width: 100%;
+            max-width: 100%;
+            overflow-wrap: break-word;
+        }
+
+        .row-block-icon {
+            margin-right: 12px;
+            margin-top: 2px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+        }
+
+        .row-block-icon svg {
+            width: 30px;
+            height: 30px;
+            fill: rgba(255, 255, 255, 0.85);
+        }
+
+        .row-block-content {
+            flex: 1;
+            min-width: 0;
+            word-wrap: break-word;
+            word-break: normal;
+            overflow-wrap: break-word;
+            max-width: calc(100% - 48px);
+            width: auto;
+        }
+
+        .row-block .label {
+            font-size: 14px;
+            color: rgba(142, 142, 147, 0.85);
+            margin-bottom: 8px;
+            word-break: keep-all;
+        }
+
+        .row-block .value {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 18px;
+            font-weight: 500;
+            word-wrap: break-word;
+            word-break: normal;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            line-height: 1.3;
+            max-width: 100%;
+            display: inline-block;
+        }
+
+        /* Стили для скролл-ленты количества билетов */
+        .quantity-scroll-container {
+            width: 100%;
+            position: relative;
+            margin-top: 8px;
+        }
+
+        .quantity-scroll-track {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(to right, #1a1a1a, #333333, #1a1a1a);
+            border-radius: 3px;
+            position: relative;
+            margin: 20px 0;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        .quantity-scroll-thumb {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background-color: #151e27;
+            border-radius: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 2;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s;
+            border: 3px solid #e21a1a;
+        }
+
+        .quantity-scroll-thumb:active {
+            border-color: #ff3333;
+            box-shadow: 0 0 10px rgba(226, 26, 26, 0.5);
+        }
+
+        /* Стили для отметок на скролл-ленте */
+        .quantity-track-dots {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .track-dot {
+            width: 14px;
+            height: 14px;
+            background-color: #333333;
+            border-radius: 50%;
+            border: 2px solid #444444;
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .track-dot.active {
+            background-color: #e21a1a;
+            border-color: #ff3333;
+            box-shadow: 0 0 5px rgba(226, 26, 26, 0.7);
+        }
+
+        /* Цифры под скролл-лентой */
+        .quantity-numbers {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .quantity-number {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            font-weight: 500;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Стили для выбора способа оплаты */
+        .payment-select {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: transparent;
+            border: 1px solid rgba(58, 72, 89, 0.7);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 16px;
+            font-weight: 500;
+            appearance: none;
+            cursor: pointer;
+            margin-top: 8px;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            background-size: 20px;
+            padding-right: 44px;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .payment-select option {
+            background-color: #2a3647;
+            color: rgba(255, 255, 255, 0.85);
+            padding: 12px;
+            border: none;
+            font-size: 16px;
+        }
+
+        .payment-select:hover {
+            border-color: rgba(226, 26, 26, 0.5);
+        }
+
+        .payment-select:focus {
+            outline: none;
+            border-color: #e21a1a;
+            box-shadow: 0 0 0 2px rgba(226, 26, 26, 0.2);
+        }
+
+        .close-btn {
+            background-color: rgba(3,216,18) !important;
+            color: rgba(255, 255, 255, 1) !important;
+            border: none;
+            width: 100%;
+            max-width: 360px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: opacity 0.2s;
+            margin: 0;
+            display: block;
+        }
+
+        .close-btn:active {
+            opacity: 0.7;
+        }
+
+        @media (max-width: 500px) {
+            .ticket-container {
+                max-width: 100%;
+            }
+
+            .close-btn {
+                border-radius: 10px;
+                max-width: 100%;
+            }
+
+            .row-block .value {
+                font-size: 17px;
+                line-height: 1.2;
+            }
+
+            .row-block-content {
+                max-width: calc(100% - 40px);
+            }
+
+            .quantity-scroll-thumb {
+                width: 24px;
+                height: 24px;
+                border-width: 2px;
+            }
+
+            .track-dot {
+                width: 12px;
+                height: 12px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .row-block-content {
+                max-width: calc(100% - 36px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Верхняя часть - фон для билета -->
+    <div class="ticket-background">
+        <div class="ticket-container">
+            <div class="ticket">
+                <!-- Заголовок изменен на "Данные билета" -->
+                <div class="header">
+                    <h1>Данные билета</h1>
+                </div>
+
+                <!-- Основной контент (детали билета) -->
+                <div class="main-content" id="main-content">
+                    <!-- Количество билетов со скролл-лентой -->
+                    <div class="row-block">
+                        <div class="row-block-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm-5 6H9v2h6v-2zm4 4H9v2h10v-2zm0-8H9v2h10V6z"/>
+                            </svg>
+                        </div>
+                        <div class="row-block-content">
+                            <div class="label">Количество билетов</div>
+                            <div class="quantity-scroll-container">
+                                <div class="quantity-scroll-track" id="scroll-track">
+                                    <!-- Отметки на скролл-ленте -->
+                                    <div class="quantity-track-dots">
+                                        <div class="track-dot active" data-value="1"></div>
+                                        <div class="track-dot" data-value="2"></div>
+                                        <div class="track-dot" data-value="3"></div>
+                                        <div class="track-dot" data-value="4"></div>
+                                        <div class="track-dot" data-value="5"></div>
+                                    </div>
+                                    <!-- Ползунок (черный с красной обводкой) -->
+                                    <div class="quantity-scroll-thumb" id="scroll-thumb"></div>
+                                </div>
+                                <!-- Цифры под скролл-лентой -->
+                                <div class="quantity-numbers">
+                                    <div class="quantity-number" data-value="1">1</div>
+                                    <div class="quantity-number" data-value="2">2</div>
+                                    <div class="quantity-number" data-value="3">3</div>
+                                    <div class="quantity-number" data-value="4">4</div>
+                                    <div class="quantity-number" data-value="5">5</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Перевозчик -->
+                    <div class="row-block">
+                        <div class="row-block-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H15V3H9v2H6.5c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                            </svg>
+                        </div>
+                        <div class="row-block-content">
+                            <div class="label">Перевозчик</div>
+                            <div class="value" id="company">ООО "СКАД"</div>
+                        </div>
+                    </div>
+
+                    <!-- Маршрут -->
+                    <div class="row-block">
+                        <div class="row-block-icon">
+                            <svg viewBox="0 0 576 512" width="24" height="24">
+                                <path d="M144 336C144 318.3 158.3 304 176 304C193.7 304 208 318.3 208 336C208 353.7 193.7 368 176 368C158.3 368 144 353.7 144 336zM368 336C368 318.3 382.3 304 400 304C417.7 304 432 318.3 432 336C432 353.7 417.7 368 400 368C382.3 368 368 353.7 368 336zM74.2 70.03C99.86 38.75 167.8 0 288 0C416.6 0 478 38.63 502.4 70.55C509.9 80.32 512 91.48 512 100.4V128C529.7 128 544 142.3 544 160V224C544 241.7 529.7 256 512 256V376C512 400.1 499.3 422.1 480 435.9V488C480 501.3 469.3 512 456 512C442.7 512 432 501.3 432 488V448H144V488C144 501.3 133.3 512 120 512C106.7 512 96 501.3 96 488V435.9C76.7 422.1 64 400.1 64 376V256C46.33 256 32 241.7 32 224V160C32 142.3 46.33 128 64 128V100.4C64 91.58 66.05 79.97 74.2 70.03zM363.7 96H461.2C445.4 78.89 399.2 48 288 48C185.8 48 133.8 78.27 115.5 96H212.3C217.8 86.44 228.2 80 240 80H336C347.8 80 358.2 86.44 363.7 96zM464 144H312V224H464V144zM112 224H264V144H112V224zM112 272V376C112 389.3 122.7 400 136 400H440C453.3 400 464 389.3 464 376V272H112z"/>
+                            </svg>
+                        </div>
+                        <div class="row-block-content">
+                            <div class="label">Маршрут</div>
+                            <div class="value" id="bus">9, Междугородный автовокзал - В.Базаиха<br>н511тт124</div>
+                        </div>
+                    </div>
+
+                    <!-- Тариф -->
+                    <div class="row-block">
+                        <div class="row-block-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                                <path fill="#ffffff" d="M8 21h2v-3h6v-2h-6v-2h4.5c2.757 0 5-2.243 5-5s-2.243-5-5-5H9a1 1 0 0 0-1 1v7H5v2h3v2H5v2h3zm2-15h4.5c1.654 0 3 1.346 3 3s-1.346 3-3 3H10z"/>
+                            </svg>
+                        </div>
+                        <div class="row-block-content">
+                            <div class="label">Тариф</div>
+                            <div class="value" id="cost">Полный - 48.00 ₽</div>
+                        </div>
+                    </div>
+
+                    <!-- Способ оплаты -->
+                    <div class="row-block">
+                        <div class="row-block-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+                            </svg>
+                        </div>
+                        <div class="row-block-content">
+                            <div class="label">Способ оплаты</div>
+                            <select class="payment-select" id="payment-method">
+                                <option value="subscription" selected>Подписка (Сбербанк)</option>
+                                <option value="sbp">СБП</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Нижняя часть - темный фон под кнопкой -->
+    <div class="button-section">
+        <div class="ticket-container">
+            <button class="close-btn" id="closeButton">ОПЛАТИТЬ - 48 ₽</button>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // Элементы скролл-ленты
+        const scrollTrack = document.getElementById('scroll-track');
+        const scrollThumb = document.getElementById('scroll-thumb');
+        const trackDots = document.querySelectorAll('.track-dot');
+        const quantityNumbers = document.querySelectorAll('.quantity-number');
+
+        // Текущее выбранное количество
+        let selectedQuantity = 1;
+
+        // Функция для установки позиции ползунка
+        function setThumbPosition(value) {
+            const trackWidth = scrollTrack.offsetWidth;
+            const positions = [0, 0.25, 0.5, 0.75, 1]; // Позиции для значений 1-5
+            const position = positions[value - 1] * trackWidth;
+
+            scrollThumb.style.left = `${position}px`;
+
+            // Обновляем активные точки на треке
+            trackDots.forEach(dot => {
+                const dotValue = parseInt(dot.getAttribute('data-value'));
+                if (dotValue === value) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }
+
+        // Инициализация позиции ползунка
+        setThumbPosition(1);
+
+        // Обработчик клика на точки
+        trackDots.forEach(dot => {
+            dot.addEventListener('click', function() {
+                const value = parseInt(this.getAttribute('data-value'));
+                selectedQuantity = value;
+                setThumbPosition(value);
+            });
+        });
+
+        // Обработчик клика на цифры
+        quantityNumbers.forEach(number => {
+            number.addEventListener('click', function() {
+                const value = parseInt(this.getAttribute('data-value'));
+                selectedQuantity = value;
+                setThumbPosition(value);
+            });
+        });
+
+        // Обработчик перетаскивания ползунка
+        let isDragging = false;
+
+        scrollThumb.addEventListener('mousedown', startDrag);
+        scrollThumb.addEventListener('touchstart', startDrag);
+
+        function startDrag(e) {
+            isDragging = true;
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('touchmove', drag);
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchend', stopDrag);
+            e.preventDefault();
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+
+            let clientX;
+            if (e.type === 'touchmove') {
+                clientX = e.touches[0].clientX;
+            } else {
+                clientX = e.clientX;
+            }
+
+            const trackRect = scrollTrack.getBoundingClientRect();
+            let position = clientX - trackRect.left;
+
+            // Ограничиваем положение в пределах трека
+            if (position < 0) position = 0;
+            if (position > trackRect.width) position = trackRect.width;
+
+            // Определяем ближайшее значение (1-5)
+            const segmentWidth = trackRect.width / 4; // 4 сегмента между 5 точками
+            let value = Math.round(position / segmentWidth) + 1;
+
+            // Ограничиваем значения 1-5
+            if (value < 1) value = 1;
+            if (value > 5) value = 5;
+
+            if (selectedQuantity !== value) {
+                selectedQuantity = value;
+                setThumbPosition(value);
+            }
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('touchmove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+            document.removeEventListener('touchend', stopDrag);
+        }
+
+        // Обработчик клика по треку для быстрого переключения
+        scrollTrack.addEventListener('click', function(e) {
+            const trackRect = this.getBoundingClientRect();
+            const position = e.clientX - trackRect.left;
+            const segmentWidth = trackRect.width / 4;
+            let value = Math.round(position / segmentWidth) + 1;
+
+            if (value < 1) value = 1;
+            if (value > 5) value = 5;
+
+            if (selectedQuantity !== value) {
+                selectedQuantity = value;
+                setThumbPosition(value);
+            }
+        });
+
+        // Обработка выбора способа оплаты
+        const paymentSelect = document.getElementById('payment-method');
+        paymentSelect.addEventListener('change', function() {
+            // Здесь можно добавить логику обработки выбора способа оплаты
+            console.log('Выбран способ оплаты:', this.value);
+        });
+
+        // Обработка кнопки закрытия
+        document.getElementById('closeButton').addEventListener('click', function() {
+            tg.close();
+        });
+
+        // Обработка кнопки "Назад" в Telegram
+        tg.BackButton.onClick(function() {
+            tg.close();
+        });
+
+        tg.BackButton.show();
+        tg.ready();
+
+        // Обработка ресайза окна для корректного позиционирования ползунка
+        window.addEventListener('resize', function() {
+            setThumbPosition(selectedQuantity);
+        });
+    </script>
+</body>
+</html>
